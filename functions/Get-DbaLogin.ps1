@@ -1,164 +1,194 @@
 function Get-DbaLogin {
     <#
-        .SYNOPSIS
-            Function to get an SMO login object of the logins for a given SQL Instance. Takes a server object from the pipe
+    .SYNOPSIS
+        Function to get an SMO login object of the logins for a given SQL Server instance. Takes a server object from the pipeline.
 
-        .DESCRIPTION
-            The Get-DbaLogin function returns an SMO Login object for the logins passed, if there are no users passed it will return all logins.
+    .DESCRIPTION
+        The Get-DbaLogin function returns an SMO Login object for the logins passed, if there are no users passed it will return all logins.
 
-        .PARAMETER SqlInstance
-            The SQL Server instance, or instances.You must have sysadmin access and server version must be SQL Server version 2000 or higher.
+    .PARAMETER SqlInstance
+        The target SQL Server instance or instances.You must have sysadmin access and server version must be SQL Server version 2000 or higher.
 
-        .PARAMETER SqlCredential
-            Allows you to login to servers using SQL Logins as opposed to Windows Auth/Integrated/Trusted.
+    .PARAMETER SqlCredential
+        Login to the target instance using alternative credentials. Accepts PowerShell credentials (Get-Credential).
 
-        .PARAMETER Login
-            The login(s) to process - this list is auto-populated from the server. If unspecified, all logins will be processed.
+        Windows Authentication, SQL Server Authentication, Active Directory - Password, and Active Directory - Integrated are all supported.
 
-        .PARAMETER ExcludeLogin
-            The login(s) to exclude - this list is auto-populated from the server
+        For MFA support, please use Connect-DbaInstance.
 
-        .PARAMETER IncludeFilter
-            A list of logins to include - accepts wildcard patterns
+    .PARAMETER Login
+        The login(s) to process - this list is auto-populated from the server. If unspecified, all logins will be processed.
 
-        .PARAMETER ExcludeFilter
-            A list of logins to exclude - accepts wildcard patterns
+    .PARAMETER ExcludeLogin
+        The login(s) to exclude - this list is auto-populated from the server
 
-        .PARAMETER NoSystem
-            A Switch to remove System Logins from the output.
+    .PARAMETER IncludeFilter
+        A list of logins to include - accepts wildcard patterns
 
-        .PARAMETER SQLLogins
-            A Switch to return Logins of type SQLLogin only.
+    .PARAMETER ExcludeFilter
+        A list of logins to exclude - accepts wildcard patterns
 
-        .PARAMETER WindowsLogins
-            A Switch to return Logins of type Windows only.
+    .PARAMETER ExcludeSystemLogin
+        A Switch to remove System Logins from the output.
 
-        .PARAMETER Locked
-            A Switch to return locked Logins.
+    .PARAMETER Type
+        Filters logins by their type. Valid options are Windows and SQL.
 
-        .PARAMETER Disabled
-            A Switch to return disabled Logins.
+    .PARAMETER Locked
+        A Switch to return locked Logins.
 
-        .PARAMETER HasAccess
-            A Switch to return Logins that have access to the instance of SQL Server.
+    .PARAMETER Disabled
+        A Switch to return disabled Logins.
 
-        .PARAMETER EnableException
-            By default, when something goes wrong we try to catch it, interpret it and give you a friendly warning message.
-            This avoids overwhelming you with "sea of red" exceptions, but is inconvenient because it basically disables advanced scripting.
-            Using this switch turns this "nice by default" feature off and enables you to catch exceptions with your own try/catch.
+    .PARAMETER SqlLogins
+        Deprecated. Please use -Type SQL
 
-        .NOTES
-            Author: Mitchell Hamann (@SirCaptainMitch)
-            Author: Klaas Vandenberghe (@powerdbaklaas)
-            Author: Robert Corrigan (@rjcorrig)
-            Author: Rob Sewell (@SQLDBaWithBeard)
+    .PARAMETER WindowsLogins
+        Deprecated. Please use -Type Windows.
 
-            Website: https://dbatools.io
-            Copyright: (C) Chrissy LeMaire, clemaire@gmail.com
-            License: GNU GPL v3 https://opensource.org/licenses/GPL-3.0
+    .PARAMETER HasAccess
+        A Switch to return Logins that have access to the instance of SQL Server.
 
-        .LINK
-            https://dbatools.io/Get-DbaLogin
+    .PARAMETER Detailed
+        A Switch to return additional information available from the LoginProperty function
 
-        .EXAMPLE
-            Get-DbaLogin -SqlInstance sql2016
+    .PARAMETER EnableException
+        By default, when something goes wrong we try to catch it, interpret it and give you a friendly warning message.
+        This avoids overwhelming you with "sea of red" exceptions, but is inconvenient because it basically disables advanced scripting.
+        Using this switch turns this "nice by default" feature off and enables you to catch exceptions with your own try/catch.
 
-            Gets all the logins from server sql2016 using NT authentication and returns the SMO login objects
+    .NOTES
+        Tags: Login, Security
+        Author: Mitchell Hamann (@SirCaptainMitch) | Rob Sewell (@SQLDBaWithBeard)
 
-        .EXAMPLE
-            Get-DbaLogin -SqlInstance sql2016 -SqlCredential $sqlcred
+        Website: https://dbatools.io
+        Copyright: (c) 2018 by dbatools, licensed under MIT
+        License: MIT https://opensource.org/licenses/MIT
 
-            Gets all the logins for a given SQL Server using a passed credential object and returns the SMO login objects
+    .LINK
+        https://dbatools.io/Get-DbaLogin
 
-        .EXAMPLE
-            Get-DbaLogin -SqlInstance sql2016 -SqlCredential $sqlcred -Login dbatoolsuser,TheCaptain
+    .EXAMPLE
+        PS C:\> Get-DbaLogin -SqlInstance sql2016
 
-            Get specific logins from server sql2016 returned as SMO login objects.
+        Gets all the logins from server sql2016 using NT authentication and returns the SMO login objects
 
-        .EXAMPLE
-            Get-DbaLogin -SqlInstance sql2016 -IncludeFilter '##*','NT *'
+    .EXAMPLE
+        PS C:\> Get-DbaLogin -SqlInstance sql2016 -SqlCredential $sqlcred
 
-            Get all user objects from server sql2016 beginning with '##' or 'NT ', returned as SMO login objects.
+        Gets all the logins for a given SQL Server using a passed credential object and returns the SMO login objects
 
-        .EXAMPLE
-            Get-DbaLogin -SqlInstance sql2016 -ExcludeLogin dbatoolsuser
+    .EXAMPLE
+        PS C:\> Get-DbaLogin -SqlInstance sql2016 -SqlCredential $sqlcred -Login dbatoolsuser,TheCaptain
 
-            Get all user objects from server sql2016 except the login dbatoolsuser, returned as SMO login objects.
+        Get specific logins from server sql2016 returned as SMO login objects.
 
-        .EXAMPLE
-            Get-DbaLogin -SqlInstance sql2016 -WindowsLogins
+    .EXAMPLE
+        PS C:\> Get-DbaLogin -SqlInstance sql2016 -IncludeFilter '##*','NT *'
 
-            Get all user objects from server sql2016 that are Windows Logins
+        Get all user objects from server sql2016 beginning with '##' or 'NT ', returned as SMO login objects.
 
-        .EXAMPLE
-            Get-DbaLogin -SqlInstance sql2016 -WindowsLogins -IncludeFilter *Rob*
+    .EXAMPLE
+        PS C:\> Get-DbaLogin -SqlInstance sql2016 -ExcludeLogin dbatoolsuser
 
-            Get all user objects from server sql2016 that are Windows Logins and have Rob in the name
+        Get all user objects from server sql2016 except the login dbatoolsuser, returned as SMO login objects.
 
-        .EXAMPLE
-            Get-DbaLogin -SqlInstance sql2016 -SQLLogins
+    .EXAMPLE
+        PS C:\> Get-DbaLogin -SqlInstance sql2016 -Type Windows
 
-            Get all user objects from server sql2016 that are SQLLogins
+        Get all user objects from server sql2016 that are Windows Logins
 
-        .EXAMPLE
-            Get-DbaLogin -SqlInstance sql2016 -SQLLogins -IncludeFilter *Rob*
+    .EXAMPLE
+        PS C:\> Get-DbaLogin -SqlInstance sql2016 -Type Windows -IncludeFilter *Rob*
 
-            Get all user objects from server sql2016 that are SQLLogins  and have Rob in the name
+        Get all user objects from server sql2016 that are Windows Logins and have Rob in the name
 
-        .EXAMPLE
-            Get-DbaLogin -SqlInstance sql2016 -NoSystem
+    .EXAMPLE
+        PS C:\> Get-DbaLogin -SqlInstance sql2016 -Type SQL
 
-            Get all user objects from server sql2016 that are not system objects
+        Get all user objects from server sql2016 that are SQL Logins
 
-        .EXAMPLE
-            Get-DbaLogin -SqlInstance sql2016 -ExcludeFilter '##*','NT *'
+    .EXAMPLE
+        PS C:\> Get-DbaLogin -SqlInstance sql2016 -Type SQL -IncludeFilter *Rob*
 
-            Get all user objects from server sql2016 except any beginning with '##' or 'NT ', returned as SMO login objects.
+        Get all user objects from server sql2016 that are SQL Logins and have Rob in the name
 
-        .EXAMPLE
-            'sql2016', 'sql2014' | Get-DbaLogin -SqlCredential $sqlcred
+    .EXAMPLE
+        PS C:\> Get-DbaLogin -SqlInstance sql2016 -ExcludeSystemLogin
 
-            Using Get-DbaLogin on the pipeline, you can also specify which names you would like with -Login.
+        Get all user objects from server sql2016 that are not system objects
 
-        .EXAMPLE
-            'sql2016', 'sql2014' | Get-DbaLogin -SqlCredential $sqlcred -Locked
+    .EXAMPLE
+        PS C:\> Get-DbaLogin -SqlInstance sql2016 -ExcludeFilter '##*','NT *'
 
-            Using Get-DbaLogin on the pipeline to get all locked logins on servers sql2016 and sql2014.
+        Get all user objects from server sql2016 except any beginning with '##' or 'NT ', returned as SMO login objects.
 
-        .EXAMPLE
-            'sql2016', 'sql2014' | Get-DbaLogin -SqlCredential $sqlcred -HasAccess -Disabled
+    .EXAMPLE
+        PS C:\> 'sql2016', 'sql2014' | Get-DbaLogin -SqlCredential $sqlcred
 
-            Using Get-DbaLogin on the pipeline to get all Disabled logins that have access on servers sql2016 or sql2014.
-    #>
+        Using Get-DbaLogin on the pipeline, you can also specify which names you would like with -Login.
+
+    .EXAMPLE
+        PS C:\> 'sql2016', 'sql2014' | Get-DbaLogin -SqlCredential $sqlcred -Locked
+
+        Using Get-DbaLogin on the pipeline to get all locked logins on servers sql2016 and sql2014.
+
+    .EXAMPLE
+        PS C:\> 'sql2016', 'sql2014' | Get-DbaLogin -SqlCredential $sqlcred -HasAccess -Disabled
+
+        Using Get-DbaLogin on the pipeline to get all Disabled logins that have access on servers sql2016 or sql2014.
+
+    .EXAMPLE
+        PS C:\> Get-DbaLogin -SqlInstance sql2016 -Type SQL -Detailed
+
+        Get all user objects from server sql2016 that are SQL Logins. Get additional info for login available from LoginProperty function
+
+#>
     [CmdletBinding()]
     param (
-        [parameter(Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
-        [Alias("ServerInstance", "SqlServer")]
+        [parameter(Mandatory, ValueFromPipeline)]
         [DbaInstanceParameter[]]$SqlInstance,
         [PSCredential]$SqlCredential,
         [object[]]$Login,
         [object[]]$IncludeFilter,
         [object[]]$ExcludeLogin,
         [object[]]$ExcludeFilter,
-        [switch]$NoSystem,
-        [switch]$SQLLogins,
-        [switch]$WindowsLogins,
+        [Alias('ExcludeSystemLogins')]
+        [switch]$ExcludeSystemLogin,
+        [ValidateSet('Windows', 'SQL')]
+        [string]$Type,
         [switch]$HasAccess,
         [switch]$Locked,
         [switch]$Disabled,
-        [Alias('Silent')]
+        [switch]$Detailed,
         [switch]$EnableException
     )
+    begin {
+        if ($SQLLogins) {
+            $Type = "SQL"
+        }
+        if ($WindowsLogins) {
+            $Type = "Windows"
+        }
 
+        $loginTimeSql = "SELECT login_name, MAX(login_time) AS login_time FROM sys.dm_exec_sessions GROUP BY login_name"
+        $loginProperty = "SELECT
+                            LOGINPROPERTY ('/*LoginName*/' , 'BadPasswordCount') as BadPasswordCount ,
+                            LOGINPROPERTY ('/*LoginName*/' , 'BadPasswordTime') as BadPasswordTime,
+                            LOGINPROPERTY ('/*LoginName*/' , 'DaysUntilExpiration') as DaysUntilExpiration,
+                            LOGINPROPERTY ('/*LoginName*/' , 'HistoryLength') as HistoryLength,
+                            LOGINPROPERTY ('/*LoginName*/' , 'IsMustChange') as IsMustChange,
+                            LOGINPROPERTY ('/*LoginName*/' , 'LockoutTime') as LockoutTime,
+                            CONVERT (varchar(514),  (LOGINPROPERTY('/*LoginName*/', 'PasswordHash')),1) as PasswordHash,
+                            LOGINPROPERTY ('/*LoginName*/' , 'PasswordLastSetTime') as PasswordLastSetTime"
+    }
     process {
         foreach ($instance in $SqlInstance) {
-            Write-Message -Level Verbose -Message "Attempting to connect to $instance"
 
             try {
                 $server = Connect-SqlInstance -SqlInstance $instance -SqlCredential $SqlCredential
-            }
-            catch {
-                Stop-Function -Message "Failure" -Category ConnectionError -ErrorRecord $_ -Target $instance -Continue
+            } catch {
+                Stop-Function -Message "Error occurred while establishing connection to $instance" -Category ConnectionError -ErrorRecord $_ -Target $instance -Continue
             }
 
             $serverLogins = $server.Logins
@@ -167,16 +197,16 @@ function Get-DbaLogin {
                 $serverLogins = $serverLogins | Where-Object Name -in $Login
             }
 
-            if ($NoSystem) {
+            if ($ExcludeSystemLogin) {
                 $serverLogins = $serverLogins | Where-Object IsSystemObject -eq $false
             }
 
-            if ($SQLLogins) {
-                $serverLogins = $serverLogins | Where-Object LoginType -eq 'SqlLogin'
+            if ($Type -eq 'Windows') {
+                $serverLogins = $serverLogins | Where-Object LoginType -in @('WindowsUser', 'WindowsGroup')
             }
 
-            if ($WindowsLogins) {
-                $serverLogins = $serverLogins | Where-Object LoginType -eq 'WindowsUser'
+            if ($Type -eq 'SQL') {
+                $serverLogins = $serverLogins | Where-Object LoginType -eq 'SqlLogin'
             }
 
             if ($IncludeFilter) {
@@ -211,23 +241,36 @@ function Get-DbaLogin {
                 $serverLogins = $serverLogins | Where-Object IsDisabled
             }
 
-            foreach ($serverLogin in $serverlogins) {
+            # There's no reliable method to get last login time with SQL Server 2000, so only show on 2005+
+            if ($server.VersionMajor -gt 9) {
+                Write-Message -Level Verbose -Message "Getting last login times"
+                $loginTimes = $server.ConnectionContext.ExecuteWithResults($loginTimeSql).Tables[0]
+            } else {
+                $loginTimes = $null
+            }
+
+            foreach ($serverLogin in $serverLogins) {
                 Write-Message -Level Verbose -Message "Processing $serverLogin on $instance"
+                $loginTime = $loginTimes | Where-Object { $_.login_name -eq $serverLogin.name } | Select-Object -ExpandProperty login_time
 
-                if ($server.VersionMajor -gt 9) {
-                    # There's no reliable method to get last login time with SQL Server 2000, so only show on 2005+
-                    Write-Message -Level Verbose -Message "Getting last login time"
-                    $sql = "SELECT MAX(login_time) AS [login_time] FROM sys.dm_exec_sessions WHERE login_name = '$($serverLogin.name)'"
-                    Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name LastLogin -Value $server.ConnectionContext.ExecuteScalar($sql)
-                }
-                else {
-                    Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name LastLogin -Value $null
-                }
-
-                Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name ComputerName -Value $server.NetName
+                Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name ComputerName -Value $server.ComputerName
                 Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name InstanceName -Value $server.ServiceName
                 Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name SqlInstance -Value $server.DomainInstanceName
+                Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name LastLogin -Value $loginTime
 
+                if ($Detailed) {
+                    $loginName = $serverLogin.name
+                    $query = $loginProperty.Replace('/*LoginName*/', "$loginName")
+                    $loginProperties = $server.ConnectionContext.ExecuteWithResults($query).Tables[0]
+                    Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name BadPasswordCount -Value $loginProperties.BadPasswordCount
+                    Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name BadPasswordTime -Value $loginProperties.BadPasswordTime
+                    Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name DaysUntilExpiration -Value $loginProperties.DaysUntilExpiration
+                    Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name HistoryLength -Value $loginProperties.HistoryLength
+                    Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name IsMustChange -Value $loginProperties.IsMustChange
+                    Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name LockoutTime -Value $loginProperties.LockoutTime
+                    Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name PasswordHash -Value $loginProperties.PasswordHash
+                    Add-Member -Force -InputObject $serverLogin -MemberType NoteProperty -Name PasswordLastSetTime -Value $loginProperties.PasswordLastSetTime
+                }
                 Select-DefaultView -InputObject $serverLogin -Property ComputerName, InstanceName, SqlInstance, Name, LoginType, CreateDate, LastLogin, HasAccess, IsLocked, IsDisabled
             }
         }

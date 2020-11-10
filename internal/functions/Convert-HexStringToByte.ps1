@@ -13,9 +13,9 @@ function Convert-HexStringToByte {
     .NOTES
     Tags: Login, Internal
     Author: Kirill Kravtsov (@nvarscar)
-    dbatools PowerShell module (https://dbatools.io, clemaire@gmail.com)
-    Copyright (C) 2016 Chrissy LeMaire
-    License: GNU GPL v3 https://opensource.org/licenses/GPL-3.0
+    dbatools PowerShell module (https://dbatools.io)
+   Copyright: (c) 2018 by dbatools, licensed under MIT
+    License: MIT https://opensource.org/licenses/MIT
 
     .EXAMPLE
     Convert-HexStringToByte '0x01641736'
@@ -26,7 +26,7 @@ function Convert-HexStringToByte {
     Convert-HexStringToByte '1234'
 
     Returns byte[] object [byte[]]@(18,52)
-#>
+    #>
     param (
         [string]$InputObject
     )

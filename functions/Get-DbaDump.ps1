@@ -1,55 +1,51 @@
 function Get-DbaDump {
     <#
-        .SYNOPSIS
-            Locate a SQL Server that has generated any memory dump files.
+    .SYNOPSIS
+        Locate a SQL Server that has generated any memory dump files.
 
-        .DESCRIPTION
-            The type of dump included in the search include minidump, all-thread dump, or a full dump.  The files have an extendion of .mdmp.
+    .DESCRIPTION
+        The type of dump included in the search include minidump, all-thread dump, or a full dump.  The files have an extendion of .mdmp.
 
-        .PARAMETER SqlInstance
-            SQL Server name or SMO object representing the SQL Server to connect to. This can be a collection and receive pipeline input to allow the function to be executed against multiple SQL Server instances.
+    .PARAMETER SqlInstance
+        The target SQL Server instance or instances. This can be a collection and receive pipeline input to allow the function to be executed against multiple SQL Server instances.
 
-        .PARAMETER SqlCredential
-            Allows you to login to servers using SQL Logins instead of Windows Authentication (AKA Integrated or Trusted). To use:
+    .PARAMETER SqlCredential
+        Login to the target instance using alternative credentials. Accepts PowerShell credentials (Get-Credential).
 
-            $scred = Get-Credential, then pass $scred object to the -SqlCredential parameter.
+        Windows Authentication, SQL Server Authentication, Active Directory - Password, and Active Directory - Integrated are all supported.
 
-            Windows Authentication will be used if SqlCredential is not specified. SQL Server does not accept Windows credentials being passed as credentials.
+        For MFA support, please use Connect-DbaInstance.
 
-            To connect as a different Windows user, run PowerShell as that user.
+    .PARAMETER EnableException
+        By default, when something goes wrong we try to catch it, interpret it and give you a friendly warning message.
+        This avoids overwhelming you with "sea of red" exceptions, but is inconvenient because it basically disables advanced scripting.
+        Using this switch turns this "nice by default" feature off and enables you to catch exceptions with your own try/catch.
 
-        .PARAMETER EnableException
-            By default, when something goes wrong we try to catch it, interpret it and give you a friendly warning message.
-            This avoids overwhelming you with "sea of red" exceptions, but is inconvenient because it basically disables advanced scripting.
-            Using this switch turns this "nice by default" feature off and enables you to catch exceptions with your own try/catch.
+    .NOTES
+        Tags: Engine, Corruption
+        Author: Garry Bargsley (@gbargsley), http://blog.garrybargsley.com
 
-        .NOTES
-            Tags: Engine, Corruption
-            Author: Garry Bargsley (@gbargsley), http://blog.garrybargsley.com
+        Website: https://dbatools.io
+        Copyright: (c) 2018 by dbatools, licensed under MIT
+        License: MIT https://opensource.org/licenses/MIT
 
-            Website: https://dbatools.io
-            Copyright: (C) Chrissy LeMaire, clemaire@gmail.com
-            License: GNU GPL v3 https://opensource.org/licenses/GPL-3.0
+    .LINK
+        https://dbatools.io/Get-DbaDump
 
-        .LINK
-            https://dbatools.io/Get-DbaDump
+    .EXAMPLE
+        PS C:\> Get-DbaDump -SqlInstance sql2016
 
-        .EXAMPLE
-            Get-DbaDump -SqlInstance sql2016
+        Shows the detailed information for memory dump(s) located on sql2016 instance
 
-            Shows the detailed information for memory dump(s) located on sql2016 instance
+    .EXAMPLE
+        PS C:\> Get-DbaDump -SqlInstance sql2016 -SqlCredential sqladmin
 
-
-        .EXAMPLE
-            Get-DbaDump -SqlInstance sql2016 -SqlCredential (Get-Credential sqladmin)
-
-            Shows the detailed information for memory dump(s) located on sql2016 instance. Logs into the SQL Server using the SQL login 'sqladmin'
+        Shows the detailed information for memory dump(s) located on sql2016 instance. Logs into the SQL Server using the SQL login 'sqladmin'
 
     #>
     [CmdletBinding()]
-    Param (
-        [parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [Alias("ServerInstance", "SqlServer")]
+    param (
+        [parameter(Mandatory, ValueFromPipeline)]
         [DbaInstanceParameter[]]$SqlInstance,
         [PSCredential]$SqlCredential,
         [switch]$EnableException
@@ -69,7 +65,7 @@ function Get-DbaDump {
             try {
                 foreach ($result in $server.Query($sql)) {
                     [PSCustomObject]@{
-                        ComputerName = $server.NetName
+                        ComputerName = $server.ComputerName
                         InstanceName = $server.ServiceName
                         SqlInstance  = $server.DomainInstanceName
                         FileName     = $result.filename
@@ -77,8 +73,7 @@ function Get-DbaDump {
                         Size         = [dbasize]$result.size_in_bytes
                     }
                 }
-            }
-            catch {
+            } catch {
                 Stop-Function -Message "Issue collecting data on $server" -Target $server -ErrorRecord $_ -Continue
             }
         }

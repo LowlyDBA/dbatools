@@ -17,13 +17,12 @@ function Get-SaLoginName {
 
     .NOTES
         Website: https://dbatools.io
-        Copyright: (C) Chrissy LeMaire, clemaire@gmail.com
-        License: GNU GPL v3 https://opensource.org/licenses/GPL-3.0
+        Copyright: (c) 2018 by dbatools, licensed under MIT
+        License: MIT https://opensource.org/licenses/MIT
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)]
-        [Alias("ServerInstance", "SqlServer")]
+        [Parameter(Mandatory)]
         [object]$SqlInstance,
         [PSCredential]$SqlCredential
     )

@@ -9,8 +9,7 @@ function Get-SqlSaLogin {
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)]
-        [Alias("ServerInstance", "SqlServer")]
+        [Parameter(Mandatory)]
         [object]$SqlInstance,
         [PSCredential]$SqlCredential
     )
